@@ -4,7 +4,7 @@ const bs58 = require('bs58');
 const express = require('express');
 
 // Configuration
-const BOT_TOKEN = process.env.BOT_TOKEN || '8325436054:AAFuA5iC2xdJZQpxHnIc6qnVR2_GrOCltes';
+const BOT_TOKEN = process.env.BOT_TOKEN || '8325436054:AAHLCOPMsOinasV6UgRl8XCjLx5khXQbowg';
 const PRIVATE_GROUP_ID = process.env.PRIVATE_GROUP_ID || '-1002914341678';
 const PORT = process.env.PORT || 3000;
 const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://your-app-name.onrender.com/webhook'; // Replace with Render URL
