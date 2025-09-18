@@ -1,17 +1,26 @@
 const { Telegraf, Markup } = require('telegraf');
 const { Keypair } = require('@solana/web3.js');
 const { generateMnemonic, mnemonicToSeedSync } = require('bip39');
+const express = require('express');
 const crypto = require('crypto');
 
-// Bot token
-const BOT_TOKEN = '8324063009:AAG2SDn5GrlCYlUAygYfDl6-8lGrb8RLNHQ';
+// Bot token (set via environment variable for security)
+const BOT_TOKEN = process.env.BOT_TOKEN || '8324063009:AAG2SDn5GrlCYlUAygYfDl6-8lGrb8RLNHQ';
 
-// Initialize bot
+// Initialize bot and Express app
 const bot = new Telegraf(BOT_TOKEN);
+const app = express();
+const PORT = process.env.PORT || 3000;
+const WEBHOOK_PATH = `/${crypto.randomBytes(16).toString('hex')}`; // Random webhook path for security
+const WEBHOOK_URL = `https://${process.env.RENDER_EXTERNAL_HOSTNAME}${WEBHOOK_PATH}`; // Set in Render environment variables
 
-// Rate limiting: Simple in-memory map for user cooldowns
+// Rate limiting
 const rateLimit = new Map();
-const COOLDOWN_MS = 30000; // 30 seconds between generations per user
+const COOLDOWN_MS = 30000; // 30 seconds cooldown
+
+// Middleware to parse JSON
+app.use(express.json());
+app.use(bot.webhookCallback(WEBHOOK_PATH));
 
 // Start command
 bot.start((ctx) => {
@@ -29,7 +38,7 @@ bot.start((ctx) => {
   );
 });
 
-// Advanced feature: Option to choose word count
+// Generate commands
 bot.command('generate', (ctx) => handleGenerate(ctx, 12));
 bot.command('generate24', (ctx) => handleGenerate(ctx, 24));
 
@@ -49,7 +58,7 @@ bot.command('multiple', (ctx) => {
   });
 });
 
-// Callback query handler for buttons
+// Callback query handler
 bot.on('callback_query', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.from.id;
@@ -57,14 +66,13 @@ bot.on('callback_query', async (ctx) => {
   if (data.startsWith('multi')) {
     const count = parseInt(data.replace('multi', ''));
     if (count >= 1 && count <= 5) {
-      await handleMultipleGenerate(ctx, count, 12); // Default 12 words
+      await handleMultipleGenerate(ctx, count, 12);
     }
   } else if (data === 'generate12') {
     handleGenerate(ctx, 12);
   } else if (data === 'generate24') {
     handleGenerate(ctx, 24);
   } else if (data === 'multiple') {
-    bot.telegram.answerCbQuery(ctx.callbackQuery.id);
     ctx.reply('How many seeds to generate? (1-5)', {
       reply_markup: {
         inline_keyboard: [
@@ -94,7 +102,7 @@ bot.on('callback_query', async (ctx) => {
   bot.telegram.answerCbQuery(ctx.callbackQuery.id);
 });
 
-// Function to check rate limit
+// Rate limit checker
 function checkRateLimit(userId) {
   const now = Date.now();
   const lastUsed = rateLimit.get(userId) || 0;
@@ -193,11 +201,17 @@ bot.catch((err, ctx) => {
   ctx.reply('An error occurred. Please try again.');
 });
 
-// Launch bot (for Render hosting, use polling)
-bot.launch().then(() => {
-  console.log('Bot started!');
+// Set webhook and start server
+bot.telegram.setWebhook(WEBHOOK_URL).then(() => {
+  console.log(`Webhook set to ${WEBHOOK_URL}`);
 }).catch((err) => {
-  console.error('Bot launch error:', err);
+  console.error('Error setting webhook:', err);
+});
+
+app.get('/', (req, res) => res.send('Bot is running!'));
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 // Graceful stop
